@@ -13,7 +13,10 @@ pub async fn download_import_url(url: String) -> Result<String, String> {
 
     let response = client
         .get(&url)
-        .header("Accept", "application/json, application/yaml, text/yaml, */*")
+        .header(
+            "Accept",
+            "application/json, application/yaml, text/yaml, */*",
+        )
         .send()
         .await
         .map_err(|e| format!("Failed to download URL: {e}"))?;
@@ -32,7 +35,10 @@ pub async fn download_import_url(url: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to read response body: {e}"))?;
 
     // Determine file extension from content type or URL
-    let ext = if url.ends_with(".yaml") || url.ends_with(".yml") || content.trim_start().starts_with("openapi:") {
+    let ext = if url.ends_with(".yaml")
+        || url.ends_with(".yml")
+        || content.trim_start().starts_with("openapi:")
+    {
         "yaml"
     } else {
         "json"
@@ -43,8 +49,7 @@ pub async fn download_import_url(url: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to create temp directory: {e}"))?;
 
     let tmp_file = tmp_dir.join(format!("import.{}", ext));
-    std::fs::write(&tmp_file, &content)
-        .map_err(|e| format!("Failed to write temp file: {e}"))?;
+    std::fs::write(&tmp_file, &content).map_err(|e| format!("Failed to write temp file: {e}"))?;
 
     Ok(tmp_file.to_string_lossy().to_string())
 }

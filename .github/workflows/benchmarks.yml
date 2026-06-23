@@ -41,6 +41,17 @@ jobs:
       - name: Clean working tree before branch switch
         run: git checkout -- .
 
+      - name: Ensure gh-pages branch exists
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if ! git ls-remote --exit-code --heads origin gh-pages; then
+            git checkout --orphan gh-pages
+            git rm -rf .
+            git commit --allow-empty -m "Initialize gh-pages for benchmark data"
+            git push origin gh-pages
+            git checkout main
+          fi
+
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:

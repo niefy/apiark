@@ -10,6 +10,9 @@ mod http_engine {
         BodyType, HttpMethod, KeyValuePair, RequestBody, SendRequestParams,
     };
 
+    // All tests in this module hit httpbin.org — ignored by default in CI.
+    // Run with: cargo test --test integration_tests -- --ignored
+
     fn base_params(method: HttpMethod, url: &str) -> SendRequestParams {
         SendRequestParams {
             method,
@@ -31,6 +34,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_get_request() {
         let params = base_params(HttpMethod::GET, "https://httpbin.org/get");
         let resp = HttpEngine::send(params).await.expect("GET request failed");
@@ -45,6 +49,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_post_json() {
         let mut params = base_params(HttpMethod::POST, "https://httpbin.org/post");
         params.headers.push(KeyValuePair::new(
@@ -66,6 +71,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_put_request() {
         let mut params = base_params(HttpMethod::PUT, "https://httpbin.org/put");
         params.body = Some(RequestBody {
@@ -79,6 +85,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_patch_request() {
         let mut params = base_params(HttpMethod::PATCH, "https://httpbin.org/patch");
         params.body = Some(RequestBody {
@@ -94,6 +101,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_delete_request() {
         let params = base_params(HttpMethod::DELETE, "https://httpbin.org/delete");
         let resp = HttpEngine::send(params)
@@ -104,6 +112,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_head_request() {
         let params = base_params(HttpMethod::HEAD, "https://httpbin.org/get");
         let resp = HttpEngine::send(params).await.expect("HEAD request failed");
@@ -114,6 +123,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_query_params() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/get");
         params
@@ -138,6 +148,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_custom_headers() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/headers");
         params.headers.push(KeyValuePair::new(
@@ -161,6 +172,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_form_urlencoded() {
         let mut params = base_params(HttpMethod::POST, "https://httpbin.org/post");
         params.body = Some(RequestBody {
@@ -180,6 +192,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_redirect_follow() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/redirect/2");
         params.follow_redirects = true;
@@ -191,6 +204,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_redirect_no_follow() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/redirect/1");
         params.follow_redirects = false;
@@ -202,6 +216,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_4xx_response() {
         let params = base_params(HttpMethod::GET, "https://httpbin.org/status/404");
         let resp = HttpEngine::send(params).await.expect("404 request failed");
@@ -210,6 +225,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_5xx_response() {
         let params = base_params(HttpMethod::GET, "https://httpbin.org/status/500");
         let resp = HttpEngine::send(params).await.expect("500 request failed");
@@ -218,6 +234,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_response_headers_and_cookies() {
         let params = base_params(
             HttpMethod::GET,
@@ -236,6 +253,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_timeout() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/delay/10");
         params.timeout_ms = Some(2_000); // 2s timeout, server delays 10s
@@ -245,6 +263,7 @@ mod http_engine {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_cookie_override() {
         let mut params = base_params(HttpMethod::GET, "https://httpbin.org/cookies");
         let mut cookies = std::collections::HashMap::new();
@@ -288,6 +307,7 @@ mod auth_handlers {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_bearer_auth() {
         let mut params = base_params("https://httpbin.org/bearer");
         params.auth = Some(AuthConfig::Bearer {
@@ -302,6 +322,7 @@ mod auth_handlers {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_basic_auth() {
         let mut params = base_params("https://httpbin.org/basic-auth/testuser/testpass");
         params.auth = Some(AuthConfig::Basic {
@@ -317,6 +338,7 @@ mod auth_handlers {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_basic_auth_wrong_password() {
         let mut params = base_params("https://httpbin.org/basic-auth/testuser/testpass");
         params.auth = Some(AuthConfig::Basic {
@@ -331,6 +353,7 @@ mod auth_handlers {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_api_key_header() {
         let mut params = base_params("https://httpbin.org/headers");
         params.auth = Some(AuthConfig::ApiKey {
@@ -348,6 +371,7 @@ mod auth_handlers {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_api_key_query() {
         let mut params = base_params("https://httpbin.org/get");
         params.auth = Some(AuthConfig::ApiKey {

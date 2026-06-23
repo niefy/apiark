@@ -12,7 +12,11 @@ use crate::models::request::HttpMethod;
 /// Write ImportData to disk as an ApiArk collection.
 /// Returns the path to the created collection directory.
 /// If `overwrite` is true, any existing collection directory is removed first.
-pub fn write_import(data: &ImportData, target_dir: &Path, overwrite: bool) -> Result<String, String> {
+pub fn write_import(
+    data: &ImportData,
+    target_dir: &Path,
+    overwrite: bool,
+) -> Result<String, String> {
     let collection_dir = target_dir.join(sanitize_filename(&data.collection_name));
 
     if collection_dir.exists() {
