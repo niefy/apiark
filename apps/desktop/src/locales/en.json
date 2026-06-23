@@ -298,7 +298,14 @@
     "back": "Back",
     "done": "Done",
     "saveTo": "Save to",
-    "selectDirectory": "Select directory..."
+    "selectDirectory": "Select directory...",
+    "fromFile": "From File",
+    "fromUrl": "From URL",
+    "urlLabel": "OpenAPI URL",
+    "download": "Fetch",
+    "downloaded": "Downloaded and ready to import",
+    "overwriteConfirm": "Collection \"{{name}}\" already exists. Overwrite?",
+    "overwrite": "Overwrite"
   },
   "export": {
     "title": "Export Collection",

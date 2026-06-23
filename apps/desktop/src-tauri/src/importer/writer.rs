@@ -11,14 +11,20 @@ use crate::models::request::HttpMethod;
 
 /// Write ImportData to disk as an ApiArk collection.
 /// Returns the path to the created collection directory.
-pub fn write_import(data: &ImportData, target_dir: &Path) -> Result<String, String> {
+/// If `overwrite` is true, any existing collection directory is removed first.
+pub fn write_import(data: &ImportData, target_dir: &Path, overwrite: bool) -> Result<String, String> {
     let collection_dir = target_dir.join(sanitize_filename(&data.collection_name));
 
     if collection_dir.exists() {
-        return Err(format!(
-            "Directory already exists: {}",
-            collection_dir.display()
-        ));
+        if overwrite {
+            fs::remove_dir_all(&collection_dir)
+                .map_err(|e| format!("Failed to remove existing collection: {e}"))?;
+        } else {
+            return Err(format!(
+                "Directory already exists: {}",
+                collection_dir.display()
+            ));
+        }
     }
 
     // Create collection structure

@@ -330,6 +330,10 @@ export async function sseDisconnect(connectionId: string): Promise<void> {
   return await invoke<void>("sse_disconnect", { connectionId });
 }
 
+export async function sseIsConnected(connectionId: string): Promise<boolean> {
+  return await invoke<boolean>("sse_is_connected", { connectionId });
+}
+
 // ── OAuth ──
 
 export async function oauthStartFlow(authConfig: AuthConfig): Promise<string> {
@@ -365,8 +369,13 @@ export async function importCollection(
   filePath: string,
   format: ImportFormat,
   targetDir: string,
+  overwrite?: boolean,
 ): Promise<string> {
-  return await invoke<string>("import_collection", { filePath, format, targetDir });
+  return await invoke<string>("import_collection", { filePath, format, targetDir, overwrite });
+}
+
+export async function downloadImportUrl(url: string): Promise<string> {
+  return await invoke<string>("download_import_url", { url });
 }
 
 export async function importEnvironment(

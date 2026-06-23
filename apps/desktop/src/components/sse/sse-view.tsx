@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveTab } from "@/stores/tab-store";
 import { useTabStore } from "@/stores/tab-store";
+import { useEnvironmentStore } from "@/stores/environment-store";
 import { useSSE } from "@/hooks/use-sse";
 import { KeyValueEditor } from "@/components/request/key-value-editor";
 import { Plug, Unplug, Trash2, ChevronDown, ChevronRight } from "lucide-react";
@@ -36,11 +37,24 @@ export function SSEView() {
 
   if (!tab) return null;
 
-  const handleConnect = () => {
+  /** Replace {{variable}} placeholders with resolved values */
+  const interpolate = (text: string, vars: Record<string, string>): string => {
+    return text.replace(/\{\{(\w[\w.-]*)\}\}/g, (_, key: string) =>
+      vars[key] !== undefined ? vars[key] : `{{${key}}}`,
+    );
+  };
+
+  const handleConnect = async () => {
     if (status === "connected") {
       disconnect();
     } else {
-      connect(tab.url, tab.headers.filter((h) => h.key.trim() && h.enabled));
+      // Resolve environment variables before connecting
+      const variables = await useEnvironmentStore.getState().getResolvedVariables();
+      const resolvedUrl = interpolate(tab.url, variables);
+      const resolvedHeaders = tab.headers
+        .filter((h) => h.key.trim() && h.enabled)
+        .map((h) => ({ ...h, value: interpolate(h.value, variables) }));
+      connect(resolvedUrl, resolvedHeaders);
     }
   };
 

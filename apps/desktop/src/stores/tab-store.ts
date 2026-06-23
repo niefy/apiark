@@ -1044,6 +1044,9 @@ export const useTabStore = create<TabState>((set, get) => ({
       maximized: cachedMaximized,
     };
 
+    // Capture environment selection
+    const envState = useEnvironmentStore.getState();
+
     // Persist all opened collection paths (not just those with open tabs)
     import("@/stores/collection-store").then(({ useCollectionStore }) => {
       const collections = useCollectionStore.getState().collections
@@ -1055,6 +1058,8 @@ export const useTabStore = create<TabState>((set, get) => ({
         activeTabIndex: activeIndex >= 0 ? activeIndex : null,
         windowState,
         collections,
+        activeEnvironmentName: envState.activeEnvironmentName,
+        activeCollectionPath: envState.activeCollectionPath,
       }).catch(() => { /* Tab persistence failure is non-critical */ });
     }).catch(() => {
       // Fallback: save without collections if store not available
@@ -1062,6 +1067,8 @@ export const useTabStore = create<TabState>((set, get) => ({
         tabs: persistedTabs,
         activeTabIndex: activeIndex >= 0 ? activeIndex : null,
         windowState,
+        activeEnvironmentName: envState.activeEnvironmentName,
+        activeCollectionPath: envState.activeCollectionPath,
       }).catch(() => {});
     });
   },

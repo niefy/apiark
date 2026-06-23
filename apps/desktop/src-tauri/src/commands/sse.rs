@@ -70,3 +70,15 @@ pub async fn sse_disconnect(
     }
     Ok(())
 }
+
+#[tauri::command]
+pub async fn sse_is_connected(
+    state: State<'_, SseManager>,
+    connection_id: String,
+) -> Result<bool, String> {
+    let connections = state
+        .connections
+        .lock()
+        .map_err(|e| format!("Lock error: {e}"))?;
+    Ok(connections.contains_key(&connection_id))
+}

@@ -40,10 +40,15 @@ const BODY_TYPE_LABEL_KEYS: Record<BodyType, string> = {
   binary: "body.binary",
 };
 
+function defaultTabForMethod(method: string): Tab {
+  if (["POST", "PUT", "PATCH"].includes(method)) return "body";
+  return "params";
+}
+
 export function RequestPanel() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<Tab>("params");
   const tab = useActiveTab();
+  const [activeTab, setActiveTab] = useState<Tab>("params");
   const {
     setParams,
     setHeaders,
@@ -58,6 +63,13 @@ export function RequestPanel() {
   } = useTabStore();
 
   const pathVars = useMemo(() => tab ? extractPathVariables(tab.url) : [], [tab?.url]);
+
+  // Auto-select default tab based on HTTP method when switching requests
+  useEffect(() => {
+    if (tab) {
+      setActiveTab(defaultTabForMethod(tab.method));
+    }
+  }, [tab?.id]);
 
   if (!tab) return null;
 

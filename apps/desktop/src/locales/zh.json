@@ -298,7 +298,14 @@
     "back": "上一步",
     "done": "完成",
     "saveTo": "保存到",
-    "selectDirectory": "选择目录..."
+    "selectDirectory": "选择目录...",
+    "fromFile": "从文件",
+    "fromUrl": "从 URL",
+    "urlLabel": "OpenAPI 地址",
+    "download": "获取",
+    "downloaded": "已下载，准备导入",
+    "overwriteConfirm": "集合 \"{{name}}\" 已存在，是否覆盖？",
+    "overwrite": "覆盖"
   },
   "export": {
     "title": "导出集合",

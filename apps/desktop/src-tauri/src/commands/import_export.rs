@@ -2,6 +2,53 @@ use std::path::Path;
 
 use crate::importer::{self, ImportPreview};
 
+/// Download content from a URL and save it to a temp file for import.
+/// Returns the path to the temp file.
+#[tauri::command]
+pub async fn download_import_url(url: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+    let response = client
+        .get(&url)
+        .header("Accept", "application/json, application/yaml, text/yaml, */*")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download URL: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "HTTP error {}: {}",
+            response.status().as_u16(),
+            response.status().canonical_reason().unwrap_or("Unknown")
+        ));
+    }
+
+    let content = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response body: {e}"))?;
+
+    // Determine file extension from content type or URL
+    let ext = if url.ends_with(".yaml") || url.ends_with(".yml") || content.trim_start().starts_with("openapi:") {
+        "yaml"
+    } else {
+        "json"
+    };
+
+    let tmp_dir = std::env::temp_dir().join("apiark-import");
+    std::fs::create_dir_all(&tmp_dir)
+        .map_err(|e| format!("Failed to create temp directory: {e}"))?;
+
+    let tmp_file = tmp_dir.join(format!("import.{}", ext));
+    std::fs::write(&tmp_file, &content)
+        .map_err(|e| format!("Failed to write temp file: {e}"))?;
+
+    Ok(tmp_file.to_string_lossy().to_string())
+}
+
 /// Detect the format of an import file.
 /// Returns: "postman", "insomnia", "openapi", "bruno", or error.
 #[tauri::command]
@@ -96,11 +143,13 @@ pub fn import_preview(file_path: &str, format: &str) -> Result<ImportPreview, St
 
 /// Parse and write an imported collection to disk.
 /// Returns the path to the created collection directory.
+/// If `overwrite` is true, any existing collection with the same name is removed first.
 #[tauri::command]
 pub fn import_collection(
     file_path: &str,
     format: &str,
     target_dir: &str,
+    overwrite: Option<bool>,
 ) -> Result<String, String> {
     let data = parse_import(file_path, format)?;
     let target = Path::new(target_dir);
@@ -110,7 +159,7 @@ pub fn import_collection(
             .map_err(|e| format!("Failed to create target directory: {e}"))?;
     }
 
-    importer::writer::write_import(&data, target)
+    importer::writer::write_import(&data, target, overwrite.unwrap_or(false))
 }
 
 /// Export a collection in the specified format.

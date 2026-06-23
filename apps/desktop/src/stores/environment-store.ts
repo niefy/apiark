@@ -4,6 +4,7 @@ import {
   loadEnvironments as loadEnvironmentsApi,
   getResolvedVariables as getResolvedVariablesApi,
   loadRootDotenv,
+  loadPersistedState,
 } from "@/lib/tauri-api";
 
 interface EnvironmentState {
@@ -12,12 +13,15 @@ interface EnvironmentState {
   activeCollectionPath: string | null;
   /** Runtime variable overrides from scripts (not persisted to disk) */
   runtimeOverrides: Record<string, string>;
+  /** Whether we've attempted to restore the persisted environment */
+  restored: boolean;
 
   loadEnvironments: (collectionPath: string) => Promise<void>;
   setActiveEnvironment: (name: string | null) => void;
   setActiveCollectionPath: (path: string | null) => void;
   getResolvedVariables: () => Promise<Record<string, string>>;
   applyMutations: (mutations: Record<string, string | null>) => void;
+  restorePersistedEnvironment: () => Promise<void>;
 }
 
 export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
@@ -25,16 +29,43 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
   activeEnvironmentName: null,
   activeCollectionPath: null,
   runtimeOverrides: {},
+  restored: false,
+
+  /** Restore persisted environment selection from state.json on startup */
+  restorePersistedEnvironment: async () => {
+    if (get().restored) return;
+    try {
+      const persisted = await loadPersistedState();
+      if (persisted.activeEnvironmentName) {
+        set({
+          activeEnvironmentName: persisted.activeEnvironmentName,
+          activeCollectionPath: persisted.activeCollectionPath ?? null,
+          restored: true,
+        });
+      } else {
+        set({ restored: true });
+      }
+    } catch {
+      set({ restored: true });
+    }
+  },
 
   loadEnvironments: async (collectionPath) => {
     try {
       const envs = await loadEnvironmentsApi(collectionPath);
+      // Restore persisted environment on first load if not yet restored
+      const state = get();
+      if (!state.restored) {
+        await state.restorePersistedEnvironment();
+      }
+      const persistedName = get().activeEnvironmentName;
+      // Use persisted environment if it exists in the loaded list, otherwise auto-select first
+      const matchedEnv = persistedName && envs.find((e) => e.name === persistedName);
       set({
         environments: envs,
         activeCollectionPath: collectionPath,
-        // Auto-select first environment if none selected
         activeEnvironmentName:
-          get().activeEnvironmentName ??
+          matchedEnv?.name ??
           (envs.length > 0 ? envs[0].name : null),
       });
     } catch (err) {
@@ -46,6 +77,10 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
 
   setActiveEnvironment: (name) => {
     set({ activeEnvironmentName: name });
+    // Trigger persistence so the selection survives app restarts
+    import("@/stores/tab-store").then(({ useTabStore }) => {
+      useTabStore.getState().persistTabs();
+    });
   },
 
   setActiveCollectionPath: (path) => {

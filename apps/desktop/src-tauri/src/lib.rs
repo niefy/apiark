@@ -47,7 +47,8 @@ use commands::history::{
 };
 use commands::http::{read_full_response, send_request, send_request_with_scripts};
 use commands::import_export::{
-    detect_import_format, export_collection, import_collection, import_environment, import_preview,
+    detect_import_format, download_import_url, export_collection, import_collection,
+    import_environment, import_preview,
 };
 use commands::license::{activate_license, deactivate_license, get_license_status, LicenseState};
 use commands::migration::{check_collection_version, migrate_collection};
@@ -65,7 +66,7 @@ use commands::scheduler::{
 };
 use commands::settings::{get_settings, update_settings, SettingsState};
 use commands::socketio::socketio_build_url;
-use commands::sse::{sse_connect, sse_disconnect, SseManager};
+use commands::sse::{sse_connect, sse_disconnect, sse_is_connected, SseManager};
 use commands::state::{load_persisted_state, save_persisted_state};
 use commands::terminal::{
     terminal_close, terminal_create, terminal_resize, terminal_write, TerminalManager,
@@ -302,6 +303,7 @@ pub fn run() {
             // SSE commands
             sse_connect,
             sse_disconnect,
+            sse_is_connected,
             // OAuth commands
             oauth_start_flow,
             oauth_get_token_status,
@@ -312,6 +314,7 @@ pub fn run() {
             import_collection,
             import_environment,
             export_collection,
+            download_import_url,
             // Settings commands
             get_settings,
             update_settings,
