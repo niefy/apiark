@@ -91,15 +91,45 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
         return;
       }
 
+      // Close all other collections and their tabs (single-collection mode)
+      const otherCollections = get().collections.filter(
+        (c) => c.type === "collection" && c.path !== path,
+      );
+      if (otherCollections.length > 0) {
+        // Close tabs from other collections
+        const { useTabStore } = await import("@/stores/tab-store");
+        for (const c of otherCollections) {
+          useTabStore.getState().closeTabsByCollection(c.path);
+        }
+        // Stop watchers and remove other collections
+        for (const c of otherCollections) {
+          unwatchCollection(c.path).catch(() => {});
+        }
+        set((state) => ({
+          collections: state.collections.filter(
+            (c) => !(c.type === "collection" && c.path !== path),
+          ),
+          readOnlyPaths: new Set(
+            [...state.readOnlyPaths].filter((p) =>
+              otherCollections.every((c) => c.path !== p),
+            ),
+          ),
+        }));
+      }
+
       // Version matches — open normally
       const tree = await openCollectionApi(path);
-      set((state) => ({
-        collections: [...state.collections, tree],
-        expandedPaths: new Set([...state.expandedPaths, path]),
-      }));
+      set({
+        collections: [tree],
+        expandedPaths: new Set([path]),
+      });
       watchCollection(path).catch((err) =>
         console.warn("Failed to start file watcher:", err),
       );
+
+      // Auto-switch to collection's environment
+      const { useEnvironmentStore } = await import("@/stores/environment-store");
+      await useEnvironmentStore.getState().loadEnvironments(path);
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showError(`Failed to open collection: ${err}`),
@@ -121,15 +151,39 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     try {
       await migrateCollectionApi(prompt.path);
       set({ migrationPrompt: null });
+
+      // Close all other collections and their tabs (single-collection mode)
+      const otherCollections = get().collections.filter(
+        (c) => c.type === "collection" && c.path !== prompt.path,
+      );
+      if (otherCollections.length > 0) {
+        const { useTabStore } = await import("@/stores/tab-store");
+        for (const c of otherCollections) {
+          useTabStore.getState().closeTabsByCollection(c.path);
+        }
+        for (const c of otherCollections) {
+          unwatchCollection(c.path).catch(() => {});
+        }
+        set((state) => ({
+          collections: state.collections.filter(
+            (c) => !(c.type === "collection" && c.path !== prompt.path),
+          ),
+        }));
+      }
+
       // Now open the migrated collection
       const tree = await openCollectionApi(prompt.path);
-      set((state) => ({
-        collections: [...state.collections, tree],
-        expandedPaths: new Set([...state.expandedPaths, prompt.path]),
-      }));
+      set({
+        collections: [tree],
+        expandedPaths: new Set([prompt.path]),
+      });
       watchCollection(prompt.path).catch((err) =>
         console.warn("Failed to start file watcher:", err),
       );
+
+      // Auto-switch to collection's environment
+      const { useEnvironmentStore } = await import("@/stores/environment-store");
+      await useEnvironmentStore.getState().loadEnvironments(prompt.path);
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showError(`Collection migration failed: ${err}`),
@@ -143,12 +197,36 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
 
     try {
       set({ migrationPrompt: null });
+
+      // Close all other collections and their tabs (single-collection mode)
+      const otherCollections = get().collections.filter(
+        (c) => c.type === "collection" && c.path !== prompt.path,
+      );
+      if (otherCollections.length > 0) {
+        const { useTabStore } = await import("@/stores/tab-store");
+        for (const c of otherCollections) {
+          useTabStore.getState().closeTabsByCollection(c.path);
+        }
+        for (const c of otherCollections) {
+          unwatchCollection(c.path).catch(() => {});
+        }
+        set((state) => ({
+          collections: state.collections.filter(
+            (c) => !(c.type === "collection" && c.path !== prompt.path),
+          ),
+        }));
+      }
+
       const tree = await openCollectionApi(prompt.path);
-      set((state) => ({
-        collections: [...state.collections, tree],
-        expandedPaths: new Set([...state.expandedPaths, prompt.path]),
-        readOnlyPaths: new Set([...state.readOnlyPaths, prompt.path]),
-      }));
+      set({
+        collections: [tree],
+        expandedPaths: new Set([prompt.path]),
+        readOnlyPaths: new Set([prompt.path]),
+      });
+
+      // Auto-switch to collection's environment
+      const { useEnvironmentStore } = await import("@/stores/environment-store");
+      await useEnvironmentStore.getState().loadEnvironments(prompt.path);
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showError(`Failed to open collection: ${err}`),
@@ -156,12 +234,26 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     }
   },
 
-  closeCollection: (path) => {
+  closeCollection: async (path) => {
     unwatchCollection(path).catch(() => {});
+    // Close all tabs belonging to this collection
+    const { useTabStore } = await import("@/stores/tab-store");
+    useTabStore.getState().closeTabsByCollection(path);
+    // Clear environment if it was for this collection
+    const { useEnvironmentStore } = await import("@/stores/environment-store");
+    const envStore = useEnvironmentStore.getState();
+    if (envStore.activeCollectionPath === path) {
+      useEnvironmentStore.setState({
+        environments: [],
+        activeEnvironmentName: null,
+        activeCollectionPath: null,
+      });
+    }
     set((state) => ({
       collections: state.collections.filter(
         (c) => !(c.type === "collection" && c.path === path),
       ),
+      readOnlyPaths: new Set([...state.readOnlyPaths].filter((p) => p !== path)),
     }));
   },
 
@@ -236,7 +328,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       tabStore.getState().closeTab(tab.id);
     }
     // 2. Stop the file watcher and remove from sidebar
-    get().closeCollection(path);
+    await get().closeCollection(path);
     // 3. Now delete the files (after watcher is stopped to avoid race conditions)
     const trashPath = await deleteItemApi(path, name);
     useUndoStore.getState().pushUndo({

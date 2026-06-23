@@ -36,6 +36,7 @@ interface TabState {
   closeTab: (id: string) => void;
   closeOtherTabs: (id: string) => void;
   closeAllTabs: () => void;
+  closeTabsByCollection: (collectionPath: string) => void;
   setActiveTab: (id: string) => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
 
@@ -611,6 +612,19 @@ export const useTabStore = create<TabState>((set, get) => ({
     set({ tabs: [], activeTabId: null });
   },
 
+  closeTabsByCollection: (collectionPath) => {
+    set((state) => {
+      const newTabs = state.tabs.filter((t) => t.collectionPath !== collectionPath);
+      let newActive = state.activeTabId;
+      if (newTabs.length === 0) {
+        newActive = null;
+      } else if (!newTabs.some((t) => t.id === newActive)) {
+        newActive = newTabs[0].id;
+      }
+      return { tabs: newTabs, activeTabId: newActive };
+    });
+  },
+
   setActiveTab: (id) => {
     set({ activeTabId: id });
   },
@@ -1077,17 +1091,14 @@ export const useTabStore = create<TabState>((set, get) => ({
     try {
       const persisted = await loadPersistedState();
 
+      // Single-collection mode: only restore the first collection
       const collectionPaths = new Set<string>();
-
-      // Restore persisted collections first (even if no tabs are open)
       if (persisted.collections?.length) {
-        for (const path of persisted.collections) {
-          collectionPaths.add(path);
-        }
+        collectionPaths.add(persisted.collections[0]);
       }
 
       if (persisted.tabs.length === 0) {
-        // No tabs to restore, but still re-open collections
+        // No tabs to restore, but still re-open the collection
         if (collectionPaths.size > 0) {
           import("@/stores/collection-store").then(({ useCollectionStore }) => {
             for (const path of collectionPaths) {
@@ -1103,6 +1114,11 @@ export const useTabStore = create<TabState>((set, get) => ({
         // Deduplicate — only restore one tab per file path
         if (seenPaths.has(pt.filePath)) continue;
         seenPaths.add(pt.filePath);
+
+        // In single-collection mode, only restore tabs from the active collection
+        if (collectionPaths.size > 0 && pt.collectionPath && !collectionPaths.has(pt.collectionPath)) {
+          continue;
+        }
 
         try {
           const file = await readRequestFile(pt.filePath);
